@@ -203,7 +203,7 @@ int main()
 
 	int jump = 0;
 	int jumpPrev = 0;
-	while (n < 0x0ffff)
+	while (n < 0x0fff)
 	    {
 			//XTft_ClearScreen(&TftInstance);
 
@@ -310,7 +310,7 @@ int main()
 				}
 			}
 			if (n % 32 == 0) {
-				xil_printf("%d\r\n", n);
+				//xil_printf("%d\r\n", n);
 			}
 			n++;
 
@@ -319,8 +319,12 @@ int main()
 			dudeTopPrev = dudeTop;
 			dudeBottomPrev = dudeBottom;
 
-			xil_printf("%d %d\r\n", input0Base[n]);
+			xil_printf("%d %x\r\n", input0Base[n], n);
 			//usleep(15000);
+
+			if(jump == 1){
+
+			}
 	    }
 
    XCACHE_DISABLE_ICACHE();
@@ -381,3 +385,47 @@ int TftWriteString(XTft *InstancePtr, const u8 *CharValue)
 
 	return XST_SUCCESS;
 }
+
+
+
+
+void GenerateSound(){
+	XStatus Status;
+	while (!(AC97_Link_Is_Ready (AC97_CODEC_BASEADDR)));
+	   //set TAG and ID to 0x7C in order to access the AC'97 codec internal registers
+	AC97_Set_Tag_And_Id (AC97_CODEC_BASEADDR, 0x7C);
+
+	   //unmute the Master, Output and Headphone channels
+	Status = AC97_Unmute (AC97_CODEC_BASEADDR, AC97_MASTER_VOLUME_OFFSET);
+	Status = AC97_Unmute (AC97_CODEC_BASEADDR, AC97_HEADPHONE_VOLUME_OFFSET);
+	Status = AC97_Unmute (AC97_CODEC_BASEADDR, AC97_PCM_OUT_VOLUME_OFFSET);
+
+	   //set the volume on these channels
+	Status = AC97_Set_Volume (AC97_CODEC_BASEADDR, AC97_MASTER_VOLUME_OFFSET,
+	   						     BOTH_CHANNELS, VOLUME_MAX);
+	Status = AC97_Set_Volume (AC97_CODEC_BASEADDR, AC97_HEADPHONE_VOLUME_OFFSET,
+	   						     BOTH_CHANNELS, VOLUME_MAX);
+	Status = AC97_Set_Volume (AC97_CODEC_BASEADDR, AC97_PCM_OUT_VOLUME_OFFSET,
+	   						     BOTH_CHANNELS, VOLUME_MAX);
+
+	//set the volume on the LINE IN input
+	Status = AC97_Set_Volume (AC97_CODEC_BASEADDR, AC97_LINE_IN_VOLUME_OFFSET,
+	   						     BOTH_CHANNELS, VOLUME_MAX);
+	   	//set the volume on the MIC input and allow 20db boost
+	Status = AC97_Set_Volume (AC97_CODEC_BASEADDR, AC97_MIC_VOLUME_OFFSET,
+	   						     BOTH_CHANNELS, (1 << boost20dB) | VOLUME_MAX);
+
+		//set record gain
+	Status = AC97_Set_Volume (AC97_CODEC_BASEADDR, AC97_RECORD_GAIN_OFFSET,
+	   						     BOTH_CHANNELS, GAIN_MIN);
+
+	   //set 3D and unselect loopback
+	Status = AC97_WriteReg (AC97_CODEC_BASEADDR, 0x20, 0x2000);
+
+	Status = AC97_Select_Input (AC97_CODEC_BASEADDR, BOTH_CHANNELS, AC97_MIC_SELECT);
+	Status = AC97_Unmute (AC97_CODEC_BASEADDR, AC97_MIC_VOLUME_OFFSET);
+	Status = AC97_Mute (AC97_CODEC_BASEADDR, AC97_LINE_IN_VOLUME_OFFSET);
+
+	GenSquare (AC97_CODEC_BASEADDR, BOTH_CHANNELS, 1000, 500);
+}
+
