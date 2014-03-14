@@ -205,6 +205,31 @@ int main()
 
 	int jump = 0;
 	int jumpPrev = 0;
+
+
+	int note [5][3];
+	note [0][0] = 349;
+	note [1][0]= 261;
+	note [2][0]= 415;
+	note [3][0]= 392;
+	note [4][0]= 0;
+
+
+	note [0][1] = 51;
+	note [1][1]= 17;
+	note [2][1]= 34;
+	note [3][1]= 34;
+	note [4][1]= 51;
+
+	note [0][2] = 51;
+	note [1][2]= 17;
+	note [2][2]= 34;
+	note [3][2]= 34;
+	note [4][2]= 51;
+
+	int noteIndex = 0;
+
+
 	while (n < 0x0fff)
 	    {
 			//XTft_ClearScreen(&TftInstance);
@@ -312,21 +337,45 @@ int main()
 				}
 			}
 			if (n % 32 == 0) {
-				//xil_printf("%d\r\n", n);
+				xil_printf("%d\r\n", n);
 			}
 			n++;
+
 
 			dudeLeftPrev = dudeLeft;
 			dudeRightPrev = dudeRight;
 			dudeTopPrev = dudeTop;
 			dudeBottomPrev = dudeBottom;
 
-			xil_printf("%d %x\r\n", input0Base[n], n);
 
+				if(note[noteIndex][1]>0){
+					note[noteIndex][1]--;
+					if(noteIndex!=4){
+						int freq = note[noteIndex][0];
+						if (jump ==1 )
+							GenSquare (AC97_CODEC_BASEADDR, BOTH_CHANNELS, 1000, 15);
+						else
+							GenSquare (AC97_CODEC_BASEADDR, BOTH_CHANNELS, freq, 15);
+					}
+				}
+				else{
 
-			if(jump == 1){
-				GenSquare (AC97_CODEC_BASEADDR, BOTH_CHANNELS, 1000, 15);
-			}
+					if(noteIndex!=4){
+						int freq = note[noteIndex][0];
+						if (jump == 1)
+							GenSquare (AC97_CODEC_BASEADDR, BOTH_CHANNELS, 1000, 15);
+						else
+							GenSquare (AC97_CODEC_BASEADDR, BOTH_CHANNELS, freq, 15);
+					}
+
+					note[noteIndex][1] = note[noteIndex][2];
+					if(noteIndex !=4){
+						noteIndex++;
+					}
+					else{
+						noteIndex =0;
+					}
+				}
 
 			usleep(15000);
 	    }
