@@ -260,6 +260,8 @@ int main()
 			Xuint32 joyStick1Data = XGpio_ReadReg(XPAR_INPUT_JOYSTICK_GPIO_BASEADDR, 1);
 			xil_printf("%x\r\n", stuff);
 			Xuint32 jmp = joyStick1Data >> 10;
+			if(jmp == 1)
+				XGpio_mSetDataReg(XPAR_INPUT_JOYSTICK_GPIO_BASEADDR, 2, 1);
 			//XTft_ClearScreen(&TftInstance);
 
 			//void XTft_SetPixel(XTft *nIstancePtr, u32 ColVal, u32 RowVal, u32 PixelVal);
@@ -556,6 +558,10 @@ int main()
 			dudeRightPrev = dudeRight;
 			dudeTopPrev = dudeTop;
 			dudeBottomPrev = dudeBottom;
+
+			if (jmp==1)
+				XGpio_mSetDataReg(XPAR_INPUT_JOYSTICK_GPIO_BASEADDR, 2, 0);
+
 
 	    }
 
