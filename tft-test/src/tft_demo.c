@@ -116,6 +116,11 @@ int convert (char* num1, int index1){
 
 }
 
+#define XGpio_mSetDataReg(BaseAddress, Channel, Data) 			\
+	XGpio_WriteReg((BaseAddress), 					\
+	(((Channel) - 1) * XGPIO_CHAN_OFFSET) + XGPIO_DATA_OFFSET,	\
+	(Data))
+
 int main()
 {
   XTft_Config *TftConfigPtr;
@@ -125,16 +130,13 @@ int main()
   XUartNs550_SetBaud(XPAR_RS232_UART_0_BASEADDR, XPAR_XUARTNS550_CLOCK_HZ, 9600);
   XUartNs550_SetLineControlReg(XPAR_RS232_UART_0_BASEADDR, XUN_LCR_8_DATA_BITS);
 
-
-
   XCACHE_ENABLE_ICACHE();
   XCACHE_ENABLE_DCACHE();
 
   //initialize LCD
   LCDInitAndPrint ((char *) "-   TFT Demo   -", (char *)"-  v0.0   r09  -");
 
-
-	/*
+  	/*
 	 * Get address of the XTft_Config structure for the given device id.
 	 */
 	TftConfigPtr = XTft_LookupConfig(TFT_DEVICE_ID);
@@ -184,9 +186,6 @@ int main()
 	const int screenTop = 120 * bufferSize;
 	const int screenBottom = (120+240) * bufferSize;
 	const int screenRight = 174+292;
-
-	const int* input0Base = XPAR_INPUT_MODULE_0_BASEADDR;
-	const int* input1Base = XPAR_INPUT_MODULE_1_BASEADDR;
 
 	int dudeLeft = 0;//79;
 	int dudeTop = 100 * bufferSize;//184 * bufferSize;
@@ -255,8 +254,11 @@ int main()
 
 	int animFrame = 0;
 
-	while (n < 500)
+	while (n < 50)
 	    {
+
+			Xuint32 stuff = XGpio_ReadReg(XPAR_INPUT_JOYSTICK_GPIO_BASEADDR, 1);
+			xil_printf("%x\r\n", stuff);
 			//XTft_ClearScreen(&TftInstance);
 
 			//void XTft_SetPixel(XTft *nIstancePtr, u32 ColVal, u32 RowVal, u32 PixelVal);
@@ -549,7 +551,7 @@ int main()
 				}
 			}
 			if (n % 32 == 0) {
-				xil_printf("%d\r\n", n);
+				//xil_printf("%d\r\n", n);
 			}
 			n++;
 
