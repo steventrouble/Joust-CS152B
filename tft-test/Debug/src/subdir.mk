@@ -4,6 +4,7 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
+../src/ac97_if_00.c \
 ../src/bitmap.c \
 ../src/lcd.c \
 ../src/sleep.c \
@@ -13,6 +14,7 @@ C_SRCS += \
 ../src/xtft_sinit.c 
 
 OBJS += \
+./src/ac97_if_00.o \
 ./src/bitmap.o \
 ./src/lcd.o \
 ./src/sleep.o \
@@ -22,6 +24,7 @@ OBJS += \
 ./src/xtft_sinit.o 
 
 C_DEPS += \
+./src/ac97_if_00.d \
 ./src/bitmap.d \
 ./src/lcd.d \
 ./src/sleep.d \
