@@ -209,8 +209,8 @@ int main()
 	int it, jt;
 
 
-	int jump = 0;
-	int jumpPrev = 0;
+	Xuint32 jump = 0;
+	Xuint32 jumpPrev = 0;
 
 
 	int note [5][3];
@@ -257,8 +257,9 @@ int main()
 	while (n < 50)
 	    {
 
-			Xuint32 stuff = XGpio_ReadReg(XPAR_INPUT_JOYSTICK_GPIO_BASEADDR, 1);
+			Xuint32 joyStick1Data = XGpio_ReadReg(XPAR_INPUT_JOYSTICK_GPIO_BASEADDR, 1);
 			xil_printf("%x\r\n", stuff);
+			Xuint32 jmp = joyStick1Data >> 10;
 			//XTft_ClearScreen(&TftInstance);
 
 			//void XTft_SetPixel(XTft *nIstancePtr, u32 ColVal, u32 RowVal, u32 PixelVal);
@@ -324,17 +325,12 @@ int main()
 			int btn_data = XIo_In32(XPAR_PUSH_BUTTONS_7BIT_BASEADDR);
 
 		 	jumpPrev = jump;
-		 	jump = 0;
-
-			 if (btn_data & 0x40) {
-				jump = 1;
-			 }
-			if (btn_data & 0x8) {
+			if ((joyStick1Data &0x200)&&(joyStick1Data&0x100) ) {
 				if (dudeHorizVel < MAX_HORIZ_VEL) {
 					dudeHorizVel += 2;
 				}
 			}
-			if (btn_data & 0x1) {
+			if ( ((joyStick1Data &0x200)||(joyStick1Data&0x100))==0 ) {
 				if (dudeHorizVel > -MAX_HORIZ_VEL) {
 					dudeHorizVel -= 2;
 				}
