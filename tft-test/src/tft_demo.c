@@ -389,7 +389,7 @@ int main()
 					dudeBottom = 156 * bufferSize;
 					dudeTop = dudeBottom - 20 * bufferSize;
 					grounded = 1;
-				} else if (dudeBottom >= 122 * bufferSize && dudeBottom <= 131 * bufferSize && dudeRight >= 215 && dudeLeft <= 270) { // Platform 6
+				} else if (dudeBottom >= 122 * bufferSize && dudeBottom <= 125 * bufferSize && dudeRight >= 215 && dudeLeft <= 270) { // Platform 6
 					dudeVertVel = 0;
 					dudeBottom = 122 * bufferSize;
 					dudeTop = dudeBottom - 20 * bufferSize;
@@ -440,45 +440,45 @@ int main()
 
 			// Horizontal Collisions
 			if (dudeHorizVel > 0) {
-				if (dudeBottom >= 74 * bufferSize && dudeTop <= 83 * bufferSize && dudeRight >= 87 && dudeRight <= 184) { // Platform 2
+				if (dudeBottom >= 75 * bufferSize && dudeTop <= 83 * bufferSize && dudeRight >= 87 && dudeRight <= 184) { // Platform 2
 					dudeHorizVel *= -1;
 					dudeRight = 87;
 					dudeLeft = dudeRight - 15;
-				} else if (dudeBottom >= 62 * bufferSize && dudeTop <= 68 * bufferSize && dudeRight >= 270 && dudeRight <= 340) { // Platform 3
+				} else if (dudeBottom >= 63 * bufferSize && dudeTop <= 68 * bufferSize && dudeRight >= 270 && dudeRight <= 340) { // Platform 3
 					dudeHorizVel *= -1;
 					dudeRight = 270;
 					dudeLeft = dudeRight - 15;
-				} else if (dudeBottom >= 156 * bufferSize && dudeTop <= 162 * bufferSize && dudeRight >= 110 && dudeRight <= 179) { // Platform 5
+				} else if (dudeBottom >= 157 * bufferSize && dudeTop <= 162 * bufferSize && dudeRight >= 110 && dudeRight <= 179) { // Platform 5
 					dudeHorizVel *= -1;
 					dudeRight = 110;
 					dudeLeft = dudeRight - 15;
-				} else if (dudeBottom >= 122 * bufferSize && dudeTop <= 131 * bufferSize && dudeRight >= 215 && dudeRight <= 270) { // Platform 6
+				} else if (dudeBottom >= 124 * bufferSize && dudeTop <= 131 * bufferSize && dudeRight >= 215 && dudeRight <= 270) { // Platform 6
 					dudeHorizVel *= -1;
 					dudeRight = 215;
 					dudeLeft = dudeRight - 15;
-				} else if (dudeBottom >= 131 * bufferSize && dudeTop <= 136 * bufferSize && dudeRight >= 274 && dudeRight <= 340) { // Platform 7
+				} else if (dudeBottom >= 132 * bufferSize && dudeTop <= 136 * bufferSize && dudeRight >= 274 && dudeRight <= 340) { // Platform 7
 					dudeHorizVel *= -1;
 					dudeRight = 274;
 					dudeLeft = dudeRight - 15;
 				}
 			} else {
-				if (dudeBottom > 63 * bufferSize && dudeTop < 69 * bufferSize && dudeLeft >= 0 && dudeLeft <= 32) { // Platform 1
+				if (dudeBottom > 64 * bufferSize && dudeTop < 69 * bufferSize && dudeLeft >= 0 && dudeLeft <= 32) { // Platform 1
 					dudeHorizVel *= -1;
 					dudeLeft = 32;
 					dudeRight = dudeLeft + 15;
-				} else if (dudeBottom > 74 * bufferSize && dudeTop <= 83 * bufferSize && dudeLeft >= 87 && dudeLeft <= 184) { // Platform 2
+				} else if (dudeBottom > 75 * bufferSize && dudeTop < 82 * bufferSize && dudeLeft >= 87 && dudeLeft <= 184) { // Platform 2
 					dudeHorizVel *= -1;
 					dudeLeft = 184;
 					dudeRight = dudeLeft + 15;
-				} else if (dudeBottom > 132 * bufferSize && dudeTop < 139 * bufferSize && dudeLeft >= 0 && dudeLeft <= 65) { // Platform 4
+				} else if (dudeBottom > 133 * bufferSize && dudeTop < 137 * bufferSize && dudeLeft >= 0 && dudeLeft <= 65) { // Platform 4
 					dudeHorizVel *= -1;
 					dudeLeft = 65;
 					dudeRight = dudeLeft + 15;
-				} else if (dudeBottom > 157 * bufferSize && dudeTop < 163 * bufferSize && dudeLeft >= 110 && dudeLeft <= 179) { // Platform 5
+				} else if (dudeBottom > 158 * bufferSize && dudeTop < 161 * bufferSize && dudeLeft >= 110 && dudeLeft <= 179) { // Platform 5
 					dudeHorizVel *= -1;
 					dudeLeft = 179;
 					dudeRight = dudeLeft + 15;
-				} else if (dudeBottom > 123 * bufferSize && dudeTop < 132 * bufferSize && dudeLeft >= 215 && dudeLeft <= 270) { // Platform 6
+				} else if (dudeBottom > 124 * bufferSize && dudeTop < 131 * bufferSize && dudeLeft >= 215 && dudeLeft <= 270) { // Platform 6
 					dudeHorizVel *= -1;
 					dudeLeft = 270;
 					dudeRight = dudeLeft + 15;
