@@ -203,7 +203,7 @@ int main()
 
 	int jump = 0;
 	int jumpPrev = 0;
-	while (n < 0x0ffff)
+	while (n < 0x00fff)
 	    {
 			//XTft_ClearScreen(&TftInstance);
 
@@ -310,7 +310,7 @@ int main()
 				}
 			}
 			if (n % 32 == 0) {
-				xil_printf("%d\r\n", n);
+				//xil_printf("%d\r\n", n);
 			}
 			n++;
 
@@ -319,7 +319,7 @@ int main()
 			dudeTopPrev = dudeTop;
 			dudeBottomPrev = dudeBottom;
 
-			xil_printf("%d %d\r\n", input0Base[n]);
+			xil_printf("%d %d %x\r\n", input0Base[n], input1Base[n], n);
 			//usleep(15000);
 	    }
 
