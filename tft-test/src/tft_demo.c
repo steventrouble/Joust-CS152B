@@ -203,7 +203,7 @@ int main()
 
 	int jump = 0;
 	int jumpPrev = 0;
-	while (n < 15)
+	while (n < 0x0ffff)
 	    {
 			//XTft_ClearScreen(&TftInstance);
 
@@ -319,8 +319,8 @@ int main()
 			dudeTopPrev = dudeTop;
 			dudeBottomPrev = dudeBottom;
 
-			xil_printf("%d %d\r\n", input0Base[0], input0Base[1]);
-			usleep(15000);
+			xil_printf("%d %d\r\n", input0Base[n]);
+			//usleep(15000);
 	    }
 
    XCACHE_DISABLE_ICACHE();
