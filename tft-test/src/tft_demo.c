@@ -34,7 +34,7 @@
 *
 ******************************************************************************/
 
-
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include "xparameters.h"
@@ -48,7 +48,7 @@
 #include "xtft_hw.h"
 #include "xtft.h"
 #include "stdlib.h"
-
+#include "ac97_if_00.h"
 /************************** Constant Definitions ****************************/
 /**
  * The following constants maps to the XPAR parameter created in the
@@ -60,6 +60,8 @@
 
 //The upper three memory regions of 2MB in the DDR2 are defined to display
 //the colorbar, bitmap and a drawing
+
+#define AC97_CODEC_BASEADDR XPAR_AC97_IF_00_0_BASEADDR
 #define TFT_COLORBAR_ADDR		XPAR_MPMC_0_MPMC_HIGHADDR - 0x001FFFFF
 #define TFT_BITMAP_ADDR			XPAR_MPMC_0_MPMC_HIGHADDR - 0x003FFFFF
 
@@ -320,11 +322,13 @@ int main()
 			dudeBottomPrev = dudeBottom;
 
 			xil_printf("%d %x\r\n", input0Base[n], n);
-			//usleep(15000);
+
 
 			if(jump == 1){
-
+				GenSquare (AC97_CODEC_BASEADDR, BOTH_CHANNELS, 1000, 15);
 			}
+
+			usleep(15000);
 	    }
 
    XCACHE_DISABLE_ICACHE();
@@ -426,6 +430,6 @@ void GenerateSound(){
 	Status = AC97_Unmute (AC97_CODEC_BASEADDR, AC97_MIC_VOLUME_OFFSET);
 	Status = AC97_Mute (AC97_CODEC_BASEADDR, AC97_LINE_IN_VOLUME_OFFSET);
 
-	GenSquare (AC97_CODEC_BASEADDR, BOTH_CHANNELS, 1000, 500);
+
 }
 
