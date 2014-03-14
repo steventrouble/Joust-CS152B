@@ -1,40 +1,40 @@
 /*
  *
  * Xilinx, Inc.
- * XILINX IS PROVIDING THIS DESIGN, CODE, OR INFORMATION "AS IS" AS A 
+ * XILINX IS PROVIDING THIS DESIGN, CODE, OR INFORMATION "AS IS" AS A
  * COURTESY TO YOU.  BY PROVIDING THIS DESIGN, CODE, OR INFORMATION AS
- * ONE POSSIBLE   IMPLEMENTATION OF THIS FEATURE, APPLICATION OR 
- * STANDARD, XILINX IS MAKING NO REPRESENTATION THAT THIS IMPLEMENTATION 
- * IS FREE FROM ANY CLAIMS OF INFRINGEMENT, AND YOU ARE RESPONSIBLE 
+ * ONE POSSIBLE   IMPLEMENTATION OF THIS FEATURE, APPLICATION OR
+ * STANDARD, XILINX IS MAKING NO REPRESENTATION THAT THIS IMPLEMENTATION
+ * IS FREE FROM ANY CLAIMS OF INFRINGEMENT, AND YOU ARE RESPONSIBLE
  * FOR OBTAINING ANY RIGHTS YOU MAY REQUIRE FOR YOUR IMPLEMENTATION
- * XILINX EXPRESSLY DISCLAIMS ANY WARRANTY WHATSOEVER WITH RESPECT TO 
- * THE ADEQUACY OF THE IMPLEMENTATION, INCLUDING BUT NOT LIMITED TO 
- * ANY WARRANTIES OR REPRESENTATIONS THAT THIS IMPLEMENTATION IS FREE 
- * FROM CLAIMS OF INFRINGEMENT, IMPLIED WARRANTIES OF MERCHANTABILITY 
+ * XILINX EXPRESSLY DISCLAIMS ANY WARRANTY WHATSOEVER WITH RESPECT TO
+ * THE ADEQUACY OF THE IMPLEMENTATION, INCLUDING BUT NOT LIMITED TO
+ * ANY WARRANTIES OR REPRESENTATIONS THAT THIS IMPLEMENTATION IS FREE
+ * FROM CLAIMS OF INFRINGEMENT, IMPLIED WARRANTIES OF MERCHANTABILITY
  * AND FITNESS FOR A PARTICULAR PURPOSE.
  */
 
 /*****************************************************************************
 *
 * @Project TFT_Demo
-* 
+*
 * This project represents an example to use the xps_tft core in order to show some of
-* its features. The application loads the bitmap file stored initially in the FLASH 
-* memory and displays it in a predefined DDR2 memory area If the bitmap file is not found 
+* its features. The application loads the bitmap file stored initially in the FLASH
+* memory and displays it in a predefined DDR2 memory area If the bitmap file is not found
 * in the FLASH memory an error message is displayed on both the terminal, LCD screen and
 * the screen.
-* The application then displays a colorbar (R, G, B) with gradients into another 
+* The application then displays a colorbar (R, G, B) with gradients into another
 * predefined DDR2 memory area.
-* Pressing the Up button sets the xps_tft video base address to the colorbar image, 
-* so the colorbar is displayed. Pressing the  Down button sets the video base address to 
+* Pressing the Up button sets the xps_tft video base address to the colorbar image,
+* so the colorbar is displayed. Pressing the  Down button sets the video base address to
 * the bitmap image therefore the bitmap is displayed on the screen.
 *
 * @note
 * The 256MB DDR2 memory has to be present in order to make the xps_tft core to work
-* 
+*
 ******************************************************************************/
 
-
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include "xparameters.h"
@@ -48,7 +48,7 @@
 #include "xtft_hw.h"
 #include "xtft.h"
 #include "stdlib.h"
-
+#include "ac97_if_00.h"
 /************************** Constant Definitions ****************************/
 /**
  * The following constants maps to the XPAR parameter created in the
@@ -60,6 +60,8 @@
 
 //The upper three memory regions of 2MB in the DDR2 are defined to display
 //the colorbar, bitmap and a drawing
+
+#define AC97_CODEC_BASEADDR XPAR_AC97_IF_00_0_BASEADDR
 #define TFT_COLORBAR_ADDR		XPAR_MPMC_0_MPMC_HIGHADDR - 0x001FFFFF
 #define TFT_BITMAP_ADDR			XPAR_MPMC_0_MPMC_HIGHADDR - 0x003FFFFF
 
@@ -70,9 +72,9 @@
 #define DISPLAY_ROWS     480
 
 /******************************************************************************
- * 
+ *
  * 	Variable declaration
- * 
+ *
  * ***************************************************************************/
 
 //set to 1 in order to display debug messages
@@ -88,9 +90,9 @@ static XTft TftInstance;
 	u8 LCD_CurrentLine;
 
 /******************************************************************************
- * 
+ *
  * 	Function prototypes
- * 
+ *
  * ***************************************************************************/
 
 void LCDInitAndPrint (char * First_Line, char * Second_Line);
@@ -175,6 +177,7 @@ int main()
 	Decode_display_bitmap(&TftInstance, 0x50000000);
 
 	int *base = (int*) TftInstance.TftConfig.VideoMemBaseAddr;
+	int *stage = base + FRAME_SIZE;
 
 	const int bufferSize = 1024;
 	const int screenLeft = 174;
@@ -182,10 +185,13 @@ int main()
 	const int screenBottom = (120+240) * bufferSize;
 	const int screenRight = 174+292;
 
-	int dudeLeft = 89;
-	int dudeTop = 194 * bufferSize;
-	int dudeRight = dudeLeft + 10;
-	int dudeBottom = dudeTop + 10*bufferSize;
+	const int* input0Base = XPAR_INPUT_MODULE_0_BASEADDR;
+	const int* input1Base = XPAR_INPUT_MODULE_1_BASEADDR;
+
+	int dudeLeft = 0;//79;
+	int dudeTop = 100 * bufferSize;//184 * bufferSize;
+	int dudeRight = dudeLeft + 15;
+	int dudeBottom = dudeTop + 20*bufferSize;
 
 	int dudeVertVel = 0;
 	int dudeHorizVel = 0;
@@ -196,10 +202,59 @@ int main()
 	int dudeRightPrev = 0;
 	int dudeBottomPrev = 0;
 
-	int n = 0, i, j;
+	int n = 0;
+
+	// For iterating the screen
+	int i, j;
+	// For iterating a texture
+	int it, jt;
+
 
 	int jump = 0;
 	int jumpPrev = 0;
+
+
+	int note [5][3];
+	note [0][0] = 349;
+	note [1][0]= 261;
+	note [2][0]= 415;
+	note [3][0]= 392;
+	note [4][0]= 0;
+
+
+	note [0][1] = 51;
+	note [1][1]= 17;
+	note [2][1]= 34;
+	note [3][1]= 34;
+	note [4][1]= 51;
+
+	note [0][2] = 51;
+	note [1][2]= 17;
+	note [2][2]= 34;
+	note [3][2]= 34;
+	note [4][2]= 51;
+
+	int noteIndex = 0;
+
+	// Copy sprites to alternate staging area
+	for (i = 0; i < 640; i++) {
+		for (j = 0; j < 60 * bufferSize; j+=1024) {
+			// Copy sprite
+			*(stage + i + j) = *(base + i*2 + j*2);
+
+			// Blank out pixel
+			*(base + i*2 + j*2) = 0x00000000;
+			*(base + i*2 + j*2 + 1) = 0x00000000;
+			*(base + i*2 + j*2 + bufferSize) = 0x00000000;
+			*(base + i*2 + j*2 + bufferSize + 1) = 0x00000000;
+		}
+	}
+
+	int* getBase[] = {0, 20, 40, 60};
+	int* getBaseReverse[] = {180, 200, 220, 240};
+
+	int animFrame = 0;
+
 	while (n < 500)
 	    {
 			//XTft_ClearScreen(&TftInstance);
@@ -226,6 +281,44 @@ int main()
 				break;
 			}*/
 
+			// Sing us a song, you're the piano man
+			if(note[noteIndex][1]>0){
+				note[noteIndex][1]--;
+				if(noteIndex!=4){
+					int freq = note[noteIndex][0];
+					if (jump && !jumpPrev)
+						GenSquare (AC97_CODEC_BASEADDR, BOTH_CHANNELS, 1000, 15);
+					else
+						GenSquare (AC97_CODEC_BASEADDR, BOTH_CHANNELS, freq, 15);
+					usleep(10000);
+				} else {
+					usleep(15000);
+				}
+			}
+			else{
+
+				if(noteIndex!=4){
+					int freq = note[noteIndex][0];
+					if (jump == 1 && !jumpPrev)
+						GenSquare (AC97_CODEC_BASEADDR, BOTH_CHANNELS, 1000, 15);
+					else
+						GenSquare (AC97_CODEC_BASEADDR, BOTH_CHANNELS, freq, 15);
+					usleep(10000);
+				} else {
+					usleep(15000);
+				}
+
+				note[noteIndex][1] = note[noteIndex][2];
+				if(noteIndex !=4){
+					noteIndex++;
+				}
+				else{
+					noteIndex =0;
+				}
+			}
+
+			// Jump
+			int grounded = 0;
 			int btn_data = XIo_In32(XPAR_PUSH_BUTTONS_7BIT_BASEADDR);
 
 		 	jumpPrev = jump;
@@ -264,25 +357,141 @@ int main()
 			dudeLeft += dudeHorizVel/2;
 			dudeRight += dudeHorizVel/2;
 
-			// Collisions + Gravity
-			if (dudeTop > 194 * bufferSize) {
-				dudeVertVel = 0;
-				dudeTop = 194 * bufferSize;
-				dudeBottom = 204 * bufferSize;
-			} else if (dudeTop <= 0) {
-				dudeVertVel *= -1;
-				dudeTop = 0 * bufferSize;
-				dudeBottom = 10 * bufferSize;
+			// Vertical Collisions + Gravity
+			if (dudeVertVel > 0) {
+				if (dudeBottom >= 204 * bufferSize) { // Bottom Platform
+					dudeVertVel = 0;
+					dudeBottom = 204 * bufferSize;
+					dudeTop = dudeBottom - 20 * bufferSize;
+					grounded = 1;
+				} else if (dudeBottom >= 62 * bufferSize && dudeBottom <= 68 * bufferSize && dudeRight >= 0 && dudeLeft <= 32) { // Platform 1
+					dudeVertVel = 0;
+					dudeBottom = 62 * bufferSize;
+					dudeTop = dudeBottom - 20 * bufferSize;
+					grounded = 1;
+				} else if (dudeBottom >= 74 * bufferSize && dudeBottom <= 83 * bufferSize && dudeRight >= 87 && dudeLeft <= 184) { // Platform 2
+					dudeVertVel = 0;
+					dudeBottom = 74 * bufferSize;
+					dudeTop = dudeBottom - 20 * bufferSize;
+					grounded = 1;
+				} else if (dudeBottom >= 62 * bufferSize && dudeBottom <= 68 * bufferSize && dudeRight >= 270 && dudeLeft <= 340) { // Platform 3
+					dudeVertVel = 0;
+					dudeBottom = 62 * bufferSize;
+					dudeTop = dudeBottom - 20 * bufferSize;
+					grounded = 1;
+				} else if (dudeBottom >= 131 * bufferSize && dudeBottom <= 138 * bufferSize && dudeRight >= 0 && dudeLeft <= 65) { // Platform 4
+					dudeVertVel = 0;
+					dudeBottom = 131 * bufferSize;
+					dudeTop = dudeBottom - 20 * bufferSize;
+					grounded = 1;
+				} else if (dudeBottom >= 156 * bufferSize && dudeBottom <= 162 * bufferSize && dudeRight >= 110 && dudeLeft <= 179) { // Platform 5
+					dudeVertVel = 0;
+					dudeBottom = 156 * bufferSize;
+					dudeTop = dudeBottom - 20 * bufferSize;
+					grounded = 1;
+				} else if (dudeBottom >= 122 * bufferSize && dudeBottom <= 131 * bufferSize && dudeRight >= 215 && dudeLeft <= 270) { // Platform 6
+					dudeVertVel = 0;
+					dudeBottom = 122 * bufferSize;
+					dudeTop = dudeBottom - 20 * bufferSize;
+					grounded = 1;
+				} else if (dudeBottom >= 131 * bufferSize && dudeBottom <= 136 * bufferSize && dudeRight >= 274 && dudeLeft <= 340) { // Platform 7
+					dudeVertVel = 0;
+					dudeBottom = 131 * bufferSize;
+					dudeTop = dudeBottom - 20 * bufferSize;
+					grounded = 1;
+				}
+			} else {
+				if (dudeTop < 0) { // Top Boundary
+					dudeVertVel *= -1;
+					//dudeVertVel += 6;
+					dudeTop = 0 * bufferSize;
+					dudeBottom = 10 * bufferSize;
+				} else if (dudeTop >= 63 * bufferSize && dudeTop < 69 * bufferSize && dudeRight >= 0 && dudeLeft <= 32) { // Platform 1
+					dudeVertVel *= -1;
+					dudeTop = 69 * bufferSize;
+					dudeBottom = dudeTop + 20 * bufferSize;
+				} else if (dudeTop >= 75 * bufferSize && dudeTop < 84 * bufferSize && dudeRight >= 87 && dudeLeft <= 184) { // Platform 2
+					dudeVertVel *= -1;
+					dudeTop = 84 * bufferSize;
+					dudeBottom = dudeTop + 20 * bufferSize;
+				} else if (dudeTop >= 63 * bufferSize && dudeTop < 69 * bufferSize && dudeRight >= 270 && dudeLeft <= 340) { // Platform 3
+					dudeVertVel *= -1;
+					dudeTop = 69 * bufferSize;
+					dudeBottom = dudeTop + 20 * bufferSize;
+				} else if (dudeTop >= 132 * bufferSize && dudeTop < 139 * bufferSize && dudeRight >= 0 && dudeLeft <= 65) { // Platform 4
+					dudeVertVel *= -1;
+					dudeTop = 139 * bufferSize;
+					dudeBottom = dudeTop + 20 * bufferSize;
+				} else if (dudeTop >= 157 * bufferSize && dudeTop < 163 * bufferSize && dudeRight >= 110 && dudeLeft <= 179) { // Platform 5
+					dudeVertVel *= -1;
+					dudeTop = 163 * bufferSize;
+					dudeBottom = dudeTop + 20 * bufferSize;
+				} else if (dudeTop >= 123 * bufferSize && dudeTop < 132 * bufferSize && dudeRight >= 215 && dudeLeft <= 270) { // Platform 6
+					dudeVertVel *= -1;
+					dudeTop = 132 * bufferSize;
+					dudeBottom = dudeTop + 20 * bufferSize;
+				} else if (dudeTop >= 132 * bufferSize && dudeTop < 137 * bufferSize && dudeRight >= 274 && dudeLeft <= 340) { // Platform 7
+					dudeVertVel *= -1;
+					dudeTop = 137 * bufferSize;
+					dudeBottom = dudeTop + 20 * bufferSize;
+				}
 			}
 			dudeVertVel += 1;
 
+			// Horizontal Collisions
+			if (dudeHorizVel > 0) {
+				if (dudeBottom >= 74 * bufferSize && dudeTop <= 83 * bufferSize && dudeRight >= 87 && dudeRight <= 184) { // Platform 2
+					dudeHorizVel *= -1;
+					dudeRight = 87;
+					dudeLeft = dudeRight - 15;
+				} else if (dudeBottom >= 62 * bufferSize && dudeTop <= 68 * bufferSize && dudeRight >= 270 && dudeRight <= 340) { // Platform 3
+					dudeHorizVel *= -1;
+					dudeRight = 270;
+					dudeLeft = dudeRight - 15;
+				} else if (dudeBottom >= 156 * bufferSize && dudeTop <= 162 * bufferSize && dudeRight >= 110 && dudeRight <= 179) { // Platform 5
+					dudeHorizVel *= -1;
+					dudeRight = 110;
+					dudeLeft = dudeRight - 15;
+				} else if (dudeBottom >= 122 * bufferSize && dudeTop <= 131 * bufferSize && dudeRight >= 215 && dudeRight <= 270) { // Platform 6
+					dudeHorizVel *= -1;
+					dudeRight = 215;
+					dudeLeft = dudeRight - 15;
+				} else if (dudeBottom >= 131 * bufferSize && dudeTop <= 136 * bufferSize && dudeRight >= 274 && dudeRight <= 340) { // Platform 7
+					dudeHorizVel *= -1;
+					dudeRight = 274;
+					dudeLeft = dudeRight - 15;
+				}
+			} else {
+				if (dudeBottom > 63 * bufferSize && dudeTop < 69 * bufferSize && dudeLeft >= 0 && dudeLeft <= 32) { // Platform 1
+					dudeHorizVel *= -1;
+					dudeLeft = 32;
+					dudeRight = dudeLeft + 15;
+				} else if (dudeBottom > 74 * bufferSize && dudeTop <= 83 * bufferSize && dudeLeft >= 87 && dudeLeft <= 184) { // Platform 2
+					dudeHorizVel *= -1;
+					dudeLeft = 184;
+					dudeRight = dudeLeft + 15;
+				} else if (dudeBottom > 132 * bufferSize && dudeTop < 139 * bufferSize && dudeLeft >= 0 && dudeLeft <= 65) { // Platform 4
+					dudeHorizVel *= -1;
+					dudeLeft = 65;
+					dudeRight = dudeLeft + 15;
+				} else if (dudeBottom > 157 * bufferSize && dudeTop < 163 * bufferSize && dudeLeft >= 110 && dudeLeft <= 179) { // Platform 5
+					dudeHorizVel *= -1;
+					dudeLeft = 179;
+					dudeRight = dudeLeft + 15;
+				} else if (dudeBottom > 123 * bufferSize && dudeTop < 132 * bufferSize && dudeLeft >= 215 && dudeLeft <= 270) { // Platform 6
+					dudeHorizVel *= -1;
+					dudeLeft = 270;
+					dudeRight = dudeLeft + 15;
+				}
+			}
+
 			// Wrapping
-			if (dudeLeft >= 292) {
-				dudeLeft -= 292;
-				dudeRight -= 292;
-			} else if (dudeLeft <= 0) {
-				dudeLeft += 292;
-				dudeRight += 292;
+			if (dudeLeft > 320) {
+				dudeLeft -= 335;
+				dudeRight -= 335;
+			} else if (dudeRight < 0) {
+				dudeLeft += 335;
+				dudeRight += 335;
 			}
 
 			// Clearing
@@ -297,13 +506,46 @@ int main()
 				}
 			}
 
+			int animOffset = 0;
+			if (grounded) {
+				if (dudeHorizVel >= 0) {
+					animFrame += dudeHorizVel;
+					if (animFrame >= 3*8) {
+						animFrame -= 3*8;
+					}
+					animOffset = getBase[animFrame/8];
+				} else {
+					animFrame += -dudeHorizVel;
+					if (animFrame >= 3*8) {
+						animFrame -= 3*8;
+					}
+					animOffset = getBaseReverse[animFrame/8];
+				}
+			} else {
+				if (dudeHorizVel >= 0) {
+					if (jump) {
+						animOffset = 99;
+					} else {
+						animOffset = 121;
+					}
+				} else {
+					if (jump) {
+						animOffset = 281;
+					} else {
+						animOffset = 300;
+					}
+				}
+			}
+
+
 			// Drawing
-			for (i = dudeLeft; i < dudeRight; i++) {
-				for (j = dudeTop; j < dudeBottom; j += bufferSize) {
-					*(base + i*2 + j*2) = 0xffffffff;
-					*(base + i*2 + j*2 + 1) = 0xffffffff;
-					*(base + i*2 + j*2 + bufferSize) = 0xffffffff;
-					*(base + i*2 + j*2 + bufferSize + 1) = 0xffffffff;
+			for (i = dudeLeft, it = 2; i < dudeRight; i++, it++) {
+				for (j = dudeTop, jt = bufferSize; j < dudeBottom; j += bufferSize, jt += bufferSize) {
+					int pixelColor = *(stage + it + jt + animOffset);
+					*(base + i*2 + j*2) = pixelColor;
+					*(base + i*2 + j*2 + 1) = pixelColor;
+					*(base + i*2 + j*2 + bufferSize) = pixelColor;
+					*(base + i*2 + j*2 + bufferSize + 1) = pixelColor;
 				}
 			}
 			if (n % 32 == 0) {
@@ -311,12 +553,12 @@ int main()
 			}
 			n++;
 
+
 			dudeLeftPrev = dudeLeft;
 			dudeRightPrev = dudeRight;
 			dudeTopPrev = dudeTop;
 			dudeBottomPrev = dudeBottom;
 
-			usleep(15000);
 	    }
 
    XCACHE_DISABLE_ICACHE();
@@ -331,7 +573,7 @@ int main()
 *
 * @param    First_Line, Second_Line are pointers to the strings to be printed
 *           on the LCD screen
-* 
+*
 * @return   None
 *
 * @note     None
@@ -345,8 +587,8 @@ void LCDInitAndPrint (char * First_Line, char * Second_Line)
    LCDClear();
    LCDOn();
    LCDInit();
-   LCDPrintString   (First_Line, Second_Line);	
-	
+   LCDPrintString   (First_Line, Second_Line);
+
 }
 
 /*****************************************************************************/
@@ -377,3 +619,47 @@ int TftWriteString(XTft *InstancePtr, const u8 *CharValue)
 
 	return XST_SUCCESS;
 }
+
+
+
+
+void GenerateSound(){
+	XStatus Status;
+	while (!(AC97_Link_Is_Ready (AC97_CODEC_BASEADDR)));
+	   //set TAG and ID to 0x7C in order to access the AC'97 codec internal registers
+	AC97_Set_Tag_And_Id (AC97_CODEC_BASEADDR, 0x7C);
+
+	   //unmute the Master, Output and Headphone channels
+	Status = AC97_Unmute (AC97_CODEC_BASEADDR, AC97_MASTER_VOLUME_OFFSET);
+	Status = AC97_Unmute (AC97_CODEC_BASEADDR, AC97_HEADPHONE_VOLUME_OFFSET);
+	Status = AC97_Unmute (AC97_CODEC_BASEADDR, AC97_PCM_OUT_VOLUME_OFFSET);
+
+	   //set the volume on these channels
+	Status = AC97_Set_Volume (AC97_CODEC_BASEADDR, AC97_MASTER_VOLUME_OFFSET,
+	   						     BOTH_CHANNELS, VOLUME_MAX);
+	Status = AC97_Set_Volume (AC97_CODEC_BASEADDR, AC97_HEADPHONE_VOLUME_OFFSET,
+	   						     BOTH_CHANNELS, VOLUME_MAX);
+	Status = AC97_Set_Volume (AC97_CODEC_BASEADDR, AC97_PCM_OUT_VOLUME_OFFSET,
+	   						     BOTH_CHANNELS, VOLUME_MAX);
+
+	//set the volume on the LINE IN input
+	Status = AC97_Set_Volume (AC97_CODEC_BASEADDR, AC97_LINE_IN_VOLUME_OFFSET,
+	   						     BOTH_CHANNELS, VOLUME_MAX);
+	   	//set the volume on the MIC input and allow 20db boost
+	Status = AC97_Set_Volume (AC97_CODEC_BASEADDR, AC97_MIC_VOLUME_OFFSET,
+	   						     BOTH_CHANNELS, (1 << boost20dB) | VOLUME_MAX);
+
+		//set record gain
+	Status = AC97_Set_Volume (AC97_CODEC_BASEADDR, AC97_RECORD_GAIN_OFFSET,
+	   						     BOTH_CHANNELS, GAIN_MIN);
+
+	   //set 3D and unselect loopback
+	Status = AC97_WriteReg (AC97_CODEC_BASEADDR, 0x20, 0x2000);
+
+	Status = AC97_Select_Input (AC97_CODEC_BASEADDR, BOTH_CHANNELS, AC97_MIC_SELECT);
+	Status = AC97_Unmute (AC97_CODEC_BASEADDR, AC97_MIC_VOLUME_OFFSET);
+	Status = AC97_Mute (AC97_CODEC_BASEADDR, AC97_LINE_IN_VOLUME_OFFSET);
+
+
+}
+
