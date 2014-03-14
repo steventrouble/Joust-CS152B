@@ -1,37 +1,37 @@
 /*
  *
  * Xilinx, Inc.
- * XILINX IS PROVIDING THIS DESIGN, CODE, OR INFORMATION "AS IS" AS A 
+ * XILINX IS PROVIDING THIS DESIGN, CODE, OR INFORMATION "AS IS" AS A
  * COURTESY TO YOU.  BY PROVIDING THIS DESIGN, CODE, OR INFORMATION AS
- * ONE POSSIBLE   IMPLEMENTATION OF THIS FEATURE, APPLICATION OR 
- * STANDARD, XILINX IS MAKING NO REPRESENTATION THAT THIS IMPLEMENTATION 
- * IS FREE FROM ANY CLAIMS OF INFRINGEMENT, AND YOU ARE RESPONSIBLE 
+ * ONE POSSIBLE   IMPLEMENTATION OF THIS FEATURE, APPLICATION OR
+ * STANDARD, XILINX IS MAKING NO REPRESENTATION THAT THIS IMPLEMENTATION
+ * IS FREE FROM ANY CLAIMS OF INFRINGEMENT, AND YOU ARE RESPONSIBLE
  * FOR OBTAINING ANY RIGHTS YOU MAY REQUIRE FOR YOUR IMPLEMENTATION
- * XILINX EXPRESSLY DISCLAIMS ANY WARRANTY WHATSOEVER WITH RESPECT TO 
- * THE ADEQUACY OF THE IMPLEMENTATION, INCLUDING BUT NOT LIMITED TO 
- * ANY WARRANTIES OR REPRESENTATIONS THAT THIS IMPLEMENTATION IS FREE 
- * FROM CLAIMS OF INFRINGEMENT, IMPLIED WARRANTIES OF MERCHANTABILITY 
+ * XILINX EXPRESSLY DISCLAIMS ANY WARRANTY WHATSOEVER WITH RESPECT TO
+ * THE ADEQUACY OF THE IMPLEMENTATION, INCLUDING BUT NOT LIMITED TO
+ * ANY WARRANTIES OR REPRESENTATIONS THAT THIS IMPLEMENTATION IS FREE
+ * FROM CLAIMS OF INFRINGEMENT, IMPLIED WARRANTIES OF MERCHANTABILITY
  * AND FITNESS FOR A PARTICULAR PURPOSE.
  */
 
 /*****************************************************************************
 *
 * @Project TFT_Demo
-* 
+*
 * This project represents an example to use the xps_tft core in order to show some of
-* its features. The application loads the bitmap file stored initially in the FLASH 
-* memory and displays it in a predefined DDR2 memory area If the bitmap file is not found 
+* its features. The application loads the bitmap file stored initially in the FLASH
+* memory and displays it in a predefined DDR2 memory area If the bitmap file is not found
 * in the FLASH memory an error message is displayed on both the terminal, LCD screen and
 * the screen.
-* The application then displays a colorbar (R, G, B) with gradients into another 
+* The application then displays a colorbar (R, G, B) with gradients into another
 * predefined DDR2 memory area.
-* Pressing the Up button sets the xps_tft video base address to the colorbar image, 
-* so the colorbar is displayed. Pressing the  Down button sets the video base address to 
+* Pressing the Up button sets the xps_tft video base address to the colorbar image,
+* so the colorbar is displayed. Pressing the  Down button sets the video base address to
 * the bitmap image therefore the bitmap is displayed on the screen.
 *
 * @note
 * The 256MB DDR2 memory has to be present in order to make the xps_tft core to work
-* 
+*
 ******************************************************************************/
 
 
@@ -70,9 +70,9 @@
 #define DISPLAY_ROWS     480
 
 /******************************************************************************
- * 
+ *
  * 	Variable declaration
- * 
+ *
  * ***************************************************************************/
 
 //set to 1 in order to display debug messages
@@ -88,9 +88,9 @@ static XTft TftInstance;
 	u8 LCD_CurrentLine;
 
 /******************************************************************************
- * 
+ *
  * 	Function prototypes
- * 
+ *
  * ***************************************************************************/
 
 void LCDInitAndPrint (char * First_Line, char * Second_Line);
@@ -182,6 +182,9 @@ int main()
 	const int screenBottom = (120+240) * bufferSize;
 	const int screenRight = 174+292;
 
+	const int* input0Base = XPAR_INPUT_MODULE_0_BASEADDR;
+	const int* input1Base = XPAR_INPUT_MODULE_1_BASEADDR;
+
 	int dudeLeft = 89;
 	int dudeTop = 194 * bufferSize;
 	int dudeRight = dudeLeft + 10;
@@ -200,7 +203,7 @@ int main()
 
 	int jump = 0;
 	int jumpPrev = 0;
-	while (n < 500)
+	while (n < 15)
 	    {
 			//XTft_ClearScreen(&TftInstance);
 
@@ -316,6 +319,7 @@ int main()
 			dudeTopPrev = dudeTop;
 			dudeBottomPrev = dudeBottom;
 
+			xil_printf("%d %d\r\n", input0Base[0], input0Base[1]);
 			usleep(15000);
 	    }
 
@@ -331,7 +335,7 @@ int main()
 *
 * @param    First_Line, Second_Line are pointers to the strings to be printed
 *           on the LCD screen
-* 
+*
 * @return   None
 *
 * @note     None
@@ -345,8 +349,8 @@ void LCDInitAndPrint (char * First_Line, char * Second_Line)
    LCDClear();
    LCDOn();
    LCDInit();
-   LCDPrintString   (First_Line, Second_Line);	
-	
+   LCDPrintString   (First_Line, Second_Line);
+
 }
 
 /*****************************************************************************/
