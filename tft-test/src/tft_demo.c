@@ -176,20 +176,24 @@ int main()
 
 	int *base = (int*) TftInstance.TftConfig.VideoMemBaseAddr;
 
+	// Screen constants
 	const int bufferSize = 1024;
 	const int screenLeft = 174;
 	const int screenTop = 120 * bufferSize;
 	const int screenBottom = (120+240) * bufferSize;
 	const int screenRight = 174+292;
+	
+	// Game constants
+	const int MAX_HORIZ_VEL = 10;
+	const int MAX_FALLING_SPEED = -12;
 
+	// Initial character position + velocity
 	int dudeLeft = 89;
 	int dudeTop = 194 * bufferSize;
 	int dudeRight = dudeLeft + 10;
 	int dudeBottom = dudeTop + 10*bufferSize;
-
 	int dudeVertVel = 0;
 	int dudeHorizVel = 0;
-	const int MAX_HORIZ_VEL = 10;
 
 	int dudeLeftPrev = 0;
 	int dudeTopPrev = 0;
@@ -200,123 +204,104 @@ int main()
 
 	int jump = 0;
 	int jumpPrev = 0;
-	while (n < 500)
-	    {
-			//XTft_ClearScreen(&TftInstance);
+	
+	// Main game loop
+	while (n < 500) {
+		int btn_data = XIo_In32(XPAR_PUSH_BUTTONS_7BIT_BASEADDR);
 
-			//void XTft_SetPixel(XTft *nIstancePtr, u32 ColVal, u32 RowVal, u32 PixelVal);
-			//XTft_SetPixel(&TftInstance, numInt1-2+i, numInt2-2+j, 0xFFFFFF00);
-			//XTft_SetPixel(&TftInstance, numInt1+i, numInt2+j, 0xFFFFFF00);
-			//XTft_SetColor(&TftInstance, 0xaaaffaaa, 0);
-			/* *(base + numInt1 + numInt2) = background[numInt1][numInt2];
-			numInt1 += 1;
-			numInt3 += 1;
-			if (numInt1 > screenRight)
-			{
-				numInt1 = screenLeft;
-				numInt2 += bufferSize;
+	 	jumpPrev = jump;
+	 	jump = 0;
+
+		// Inuput - jump
+		if (btn_data & 0x40) {
+			jump = 1;
+		}
+		// Move right
+		if (btn_data & 0x8) {
+			if (dudeHorizVel < MAX_HORIZ_VEL) {
+				dudeHorizVel += 2;
 			}
-			if (numInt2 > screenBottom) {
-				//usleep(10000);
-				numInt1 = screenLeft;
-				numInt2 = screenTop;
-				n++;
+		}
+		// Move left
+		if (btn_data & 0x1) {
+			if (dudeHorizVel > -MAX_HORIZ_VEL) {
+				dudeHorizVel -= 2;
 			}
-			if (n > 1) {
-				break;
-			}*/
+		}
 
-			int btn_data = XIo_In32(XPAR_PUSH_BUTTONS_7BIT_BASEADDR);
+		// Only jump if we've just pushed the button
+		if (jump && !jumpPrev) {
+			dudeVertVel += -12;
+		}
 
-		 	jumpPrev = jump;
-		 	jump = 0;
+		// If beyond max falling speed, slow down
+		if (dudeVertVel < MAX_FALLING_SPEED) {
+			dudeVertVel = MAX_FALLING_SPEED;
+		}
 
-			 if (btn_data & 0x40) {
-				jump = 1;
-			 }
-			if (btn_data & 0x8) {
-				if (dudeHorizVel < MAX_HORIZ_VEL) {
-					dudeHorizVel += 2;
+		// Velocity
+		dudeTop += (dudeVertVel/4) * bufferSize;
+		dudeBottom += (dudeVertVel/4) * bufferSize;
+		dudeLeft += dudeHorizVel/2;
+		dudeRight += dudeHorizVel/2;
+
+		// Collisions
+		if (dudeTop > 194 * bufferSize) {
+			dudeVertVel = 0;
+			dudeTop = 194 * bufferSize;
+			dudeBottom = 204 * bufferSize;
+		} else if (dudeTop <= 0) {
+			dudeVertVel *= -1;
+			dudeTop = 0 * bufferSize;
+			dudeBottom = 10 * bufferSize;
+		}
+		
+		// Gravity
+		dudeVertVel += 1;
+
+		// Wrapping
+		if (dudeLeft >= 292) {
+			dudeLeft -= 292;
+			dudeRight -= 292;
+		} else if (dudeLeft <= 0) {
+			dudeLeft += 292;
+			dudeRight += 292;
+		}
+
+		// Clear the screen
+		for (i = dudeLeftPrev; i < dudeRightPrev; i++) {
+			for (j = dudeTopPrev; j < dudeBottomPrev; j += bufferSize) {
+				if ((i < dudeLeft || i >= dudeRight) || (j < dudeTop || j >= dudeBottom)) {
+					*(base + i*2 + j*2) = 0x00000000;
+					*(base + i*2 + j*2 + 1) = 0x00000000;
+					*(base + i*2 + j*2 + bufferSize) = 0x00000000;
+					*(base + i*2 + j*2 + bufferSize + 1) = 0x00000000;
 				}
 			}
-			if (btn_data & 0x1) {
-				if (dudeHorizVel > -MAX_HORIZ_VEL) {
-					dudeHorizVel -= 2;
-				}
+		}
+
+		// Draw the main character
+		for (i = dudeLeft; i < dudeRight; i++) {
+			for (j = dudeTop; j < dudeBottom; j += bufferSize) {
+				*(base + i*2 + j*2) = 0xffffffff;
+				*(base + i*2 + j*2 + 1) = 0xffffffff;
+				*(base + i*2 + j*2 + bufferSize) = 0xffffffff;
+				*(base + i*2 + j*2 + bufferSize + 1) = 0xffffffff;
 			}
+		}
+		
+		// Log a line every 32nd frame to detect freezes
+		if (n % 32 == 0) {
+			xil_printf("%d\r\n", n);
+		}
+		n++;
 
-			if (jump && !jumpPrev) {
-				dudeVertVel += -12;
-			}
+		dudeLeftPrev = dudeLeft;
+		dudeRightPrev = dudeRight;
+		dudeTopPrev = dudeTop;
+		dudeBottomPrev = dudeBottom;
 
-			if (dudeVertVel < -12) {
-				dudeVertVel = -12;
-			}
-
-			// Input
-			//if (n == 50) {
-			//	dudeVertVel = -bufferSize * 8;
-			//}
-
-			// Velocity
-			dudeTop += (dudeVertVel/4) * bufferSize;
-			dudeBottom += (dudeVertVel/4) * bufferSize;
-			dudeLeft += dudeHorizVel/2;
-			dudeRight += dudeHorizVel/2;
-
-			// Collisions + Gravity
-			if (dudeTop > 194 * bufferSize) {
-				dudeVertVel = 0;
-				dudeTop = 194 * bufferSize;
-				dudeBottom = 204 * bufferSize;
-			} else if (dudeTop <= 0) {
-				dudeVertVel *= -1;
-				dudeTop = 0 * bufferSize;
-				dudeBottom = 10 * bufferSize;
-			}
-			dudeVertVel += 1;
-
-			// Wrapping
-			if (dudeLeft >= 292) {
-				dudeLeft -= 292;
-				dudeRight -= 292;
-			} else if (dudeLeft <= 0) {
-				dudeLeft += 292;
-				dudeRight += 292;
-			}
-
-			// Clearing
-			for (i = dudeLeftPrev; i < dudeRightPrev; i++) {
-				for (j = dudeTopPrev; j < dudeBottomPrev; j += bufferSize) {
-					if ((i < dudeLeft || i >= dudeRight) || (j < dudeTop || j >= dudeBottom)) {
-						*(base + i*2 + j*2) = 0x00000000;
-						*(base + i*2 + j*2 + 1) = 0x00000000;
-						*(base + i*2 + j*2 + bufferSize) = 0x00000000;
-						*(base + i*2 + j*2 + bufferSize + 1) = 0x00000000;
-					}
-				}
-			}
-
-			// Drawing
-			for (i = dudeLeft; i < dudeRight; i++) {
-				for (j = dudeTop; j < dudeBottom; j += bufferSize) {
-					*(base + i*2 + j*2) = 0xffffffff;
-					*(base + i*2 + j*2 + 1) = 0xffffffff;
-					*(base + i*2 + j*2 + bufferSize) = 0xffffffff;
-					*(base + i*2 + j*2 + bufferSize + 1) = 0xffffffff;
-				}
-			}
-			if (n % 32 == 0) {
-				xil_printf("%d\r\n", n);
-			}
-			n++;
-
-			dudeLeftPrev = dudeLeft;
-			dudeRightPrev = dudeRight;
-			dudeTopPrev = dudeTop;
-			dudeBottomPrev = dudeBottom;
-
-			usleep(15000);
+		usleep(15000);
 	    }
 
    XCACHE_DISABLE_ICACHE();
